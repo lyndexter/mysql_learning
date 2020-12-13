@@ -1,5 +1,11 @@
 use library;
 
+drop table if exists user_register;
+create table user_register like user_library;
+alter table user_register add change_time timestamp default current_timestamp;
+alter table user_register add user_name varchar(50);
+alter table user_register add action varchar(10);
+alter table user_register add user_id int;
 
 /*Task 2*/
 drop trigger if exists check_login;
@@ -34,10 +40,10 @@ begin
 
 
 /*Task 4*/
-drop trigger if exists check_rate;
+drop trigger if exists check_cardinality;
 
 delimiter !!
-create trigger check_rate
+create trigger check_cardinality
 after delete
 on user_library for each row 
 begin 
@@ -45,6 +51,38 @@ begin
  then signal sqlstate "45000" 
  set message_text = "Your can't delete this row min cardinality is 2";
  end if;
+ insert into user_register(user_id,login,surname,first_name,last_name,birthday_date,birthday_place,living_place,note,rate,password_id,user_name,action)  
+ values (old.id,old.login,old.surname,old.first_name,old.last_name,
+ old.birthday_date,old.birthday_place,old.living_place,old.note,old.rate,old.password_id,user(),"delete");
+ end !!
+ Delimiter ;
+
+
+/*Task 1*/
+drop trigger if exists log_insert;
+
+delimiter !!
+create trigger log_insert
+after insert
+on user_library for each row 
+begin 
+ insert into user_register(user_id,login,surname,first_name,last_name,birthday_date,birthday_place,living_place,note,rate,password_id,user_name,action)  
+ values (new.id,new.login,new.surname,new.first_name,new.last_name,
+ new.birthday_date,new.birthday_place,new.living_place,new.note,new.rate,new.password_id,user(),"insert");
+ end !!
+ Delimiter ;
+
+
+drop trigger if exists log_update;
+
+delimiter !!
+create trigger log_update
+after update
+on user_library for each row 
+begin 
+ insert into user_register(user_id,login,surname,first_name,last_name,birthday_date,birthday_place,living_place,note,rate,password_id,user_name,action)  
+ values (new.id,new.login,new.surname,new.first_name,new.last_name,
+ new.birthday_date,new.birthday_place,new.living_place,new.note,new.rate,new.password_id,user(),"update");
  end !!
  Delimiter ;
 
