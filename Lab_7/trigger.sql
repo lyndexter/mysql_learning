@@ -1,4 +1,5 @@
 use library;
+SET SQL_SAFE_UPDATES = 0;
 
 drop table if exists user_register;
 create table user_register like user_library;
@@ -58,7 +59,7 @@ begin
  Delimiter ;
 
 
-/*Task 1*/
+/*Logging user*/
 drop trigger if exists log_insert;
 
 delimiter !!
@@ -84,5 +85,142 @@ begin
  values (new.id,new.login,new.surname,new.first_name,new.last_name,
  new.birthday_date,new.birthday_place,new.living_place,new.note,new.rate,new.password_id,user(),"update");
  end !!
- Delimiter ;
+ Delimiter ;		
 
+/*Task 1*/
+
+/*User_library constraint*/
+ drop trigger if exists user_integrity_delete;
+
+delimiter !!
+create trigger user_integrity_delete
+before delete
+on user_library for each row 
+begin 
+ delete  book_user from book_user where book_user.user_id=old.id;
+ delete  confidental_info from confidental_info where confidental_info.id=old.password_id;
+ end !!
+ Delimiter ;
+ 
+drop trigger if exists user_integrity_update;
+
+delimiter !!
+create trigger user_integrity_update
+before update
+on user_library for each row 
+begin 
+if old.password_id!=new.password.id 
+then signal sqlstate "45000" 
+ set message_text = "Your can't update password id";
+ end if;
+ end !!
+ Delimiter ;
+ 
+ /*Link constraint*/
+ 
+drop trigger if exists link_integrity_insert;
+
+delimiter !!
+create trigger link_integrity_insert
+before insert
+on link for each row 
+begin 
+if (select  distinct id from book where book.id=new.book_id) is null 
+then signal sqlstate "45000" 
+ set message_text = "Your can't insert this row this book don't exist";
+ end if;
+ end !!
+ Delimiter ;
+ 
+ drop trigger if exists link_integrity_update;
+
+delimiter !!
+create trigger link_integrity_update
+before update
+on link for each row 
+begin 
+if (select  distinct id from book where book.id=new.book_id) is null 
+then signal sqlstate "45000" 
+ set message_text = "Your can't update this row this book don't exist";
+ end if;
+ end !!
+ Delimiter ;
+ 
+ /*Password constraint*/
+  drop trigger if exists password_integrity_delete;
+ 
+ delimiter !!
+create trigger password_integrity_delete
+before delete
+on confidental_info for each row 
+begin 
+ signal sqlstate "45000" 
+ set message_text = "Your can't delete this password";
+ end !!
+ Delimiter ;
+ 
+ 
+ /*Book constraint*/
+ drop trigger if exists book_integrity_delete;
+ 
+delimiter !!
+create trigger book_integrity_delete
+before delete
+on book for each row 
+begin 
+delete from link where link.book_id=old.id;
+delete from book_user where book_user.book_id = old.id;
+end !!
+Delimiter ;
+ 
+ /*Tree catalog*/
+  drop trigger if exists catalog_integrity_delete;
+  
+ delimiter !!
+create trigger catalog_integrity_delete
+before delete
+on catalog for each row 
+begin 
+update  book set book.YDK = Null  where book.YDK = old.id;
+end !!
+Delimiter ;
+ 
+ /*Book-User constraint*/
+drop trigger if exists book_user_integrity_insert;
+  
+ delimiter !!
+create trigger book_user_integrity_insert
+before insert
+on book_user for each row 
+begin 
+if (select distinct id from book where book.id=new.book_id) is Null
+then  signal sqlstate "45000" 
+ set message_text = "Your can't insert this book_id it not exist";
+end if;
+if (select distinct id from user_library where user_library.id=new.user_id) is Null
+then  signal sqlstate "45000" 
+ set message_text = "Your can't insert this user_id it not exist";
+end if;
+end !!
+Delimiter ;
+ 
+ 
+ drop trigger if exists book_user_integrity_update;
+  
+ delimiter !!
+create trigger book_user_integrity_update
+before update
+on book_user for each row 
+begin 
+if old.book_id!=new.book_id and (select distinct id from book where book.id=new.book_id) is Null
+then  signal sqlstate "45000" 
+ set message_text = "Your can't update to this book_id it not exist";
+end if;
+if old.user_id!=new.user_id and (select distinct id from user_library where user_library.id=new.user_id) is Null
+then  signal sqlstate "45000" 
+ set message_text = "Your can't update to this user_id it not exist";
+end if;
+end !!
+Delimiter ;
+ 
+ 
